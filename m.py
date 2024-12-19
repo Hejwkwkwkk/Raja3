@@ -8,7 +8,7 @@ import threading
 from keep_alive import keep_alive
 keep_alive()
 # Insert your Telegram bot token here
-bot = telebot.TeleBot("7630314402:AAE37dJ9bTZsk7KO2SwPjGWCBp1CyGU2UJc")
+bot = telebot.TeleBot('7630314402:AAHggWxqMD7vetT2HicGAjs2G_cEBIFxfN0')
 
 # Admin user IDs
 admin_id = ["7855020275"]
@@ -18,7 +18,7 @@ GROUP_ID = "-1002374071862"
 CHANNEL_USERNAME = "@RRAJARAJ_04"
 
 # Default cooldown and attack limits
-COOLDOWN_TIME = 280  # Cooldown in seconds
+COOLDOWN_TIME = 200  # Cooldown in seconds
 ATTACK_LIMIT = 10  # Max attacks per day
 
 # Files to store user data
@@ -64,7 +64,7 @@ def handle_attack(message):
 
     # Ensure user is in the group
     if message.chat.id != int(GROUP_ID):
-        bot.reply_to(message, "This bot can only be used in the specified group. Join - https://t.me/c/2374071862/5095)
+        bot.reply_to(message, "This bot can only be used in the specified group. Join - https://t.me/c/2374071862/5095")
         return
 
     # Ensure user is a member of the channel
